@@ -79,24 +79,23 @@ def gen_batch_function(data_folder,  image_shape):
 
         random.shuffle(image_paths)
 
-        while (True):
-            for batch_i in range(0, len(image_paths), batch_size):
-                images = []
-                gt_images = []
-                for image_file in image_paths[batch_i:batch_i+batch_size]:
-                    gt_image_file = label_paths[os.path.basename(image_file)]
+        for batch_i in range(0, len(image_paths), batch_size):
+            images = []
+            gt_images = []
+            for image_file in image_paths[batch_i:batch_i+batch_size]:
+                gt_image_file = label_paths[os.path.basename(image_file)]
 
-                    image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
-                    gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
+                image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
+                gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
 
-                    gt_bg = np.all(gt_image == background_color, axis=2)
-                    gt_bg = gt_bg.reshape(*gt_bg.shape, 1)
-                    gt_image = np.concatenate((gt_bg, np.invert(gt_bg)), axis=2)
+                gt_bg = np.all(gt_image == background_color, axis=2)
+                gt_bg = gt_bg.reshape(*gt_bg.shape, 1)
+                gt_image = np.concatenate((gt_bg, np.invert(gt_bg)), axis=2)
 
-                    images.append(image)
-                    gt_images.append(gt_image)
+                images.append(image)
+                gt_images.append(gt_image)
 
-                yield np.array(images), np.array(gt_images)
+            yield np.array(images), np.array(gt_images)
     return get_batches_fn
 
 
