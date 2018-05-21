@@ -1,20 +1,16 @@
 
-# coding: utf-8
-
-# In[1]:
-
-
 import os.path
 import tensorflow as tf
 import helper
 import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
-from tqdm import *
+#from tqdm import *
 
 
-# In[2]:
-
+TRANSFER_LEARNING_MODE = True
+LEARNING_RATE = 0.0001
+KEEP_OPEN = 0.5
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion('1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
@@ -27,7 +23,6 @@ else:
     print('Default GPU Device: {}'.format(tf.test.gpu_device_name()))
 
 
-# In[3]:
 
 
 def load_vgg(sess, vgg_path):
@@ -61,15 +56,6 @@ def load_vgg(sess, vgg_path):
 tests.test_load_vgg(load_vgg, tf)
 
 
-# In[4]:
-
-
-TRANSFER_LEARNING_MODE = True
-
-
-# In[5]:
-
-
 def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     """
     Create the layers for a fully convolutional network.  Build skip-layers using the vgg layers.
@@ -89,28 +75,37 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
 
         # Upsample
 
-        vgg_layer7_out_1x = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, strides = (1,1), padding = "SAME",        kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3), kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),         activation = tf.nn.relu, name = "DECON_vgg_layer7_out_1x")
+        vgg_layer7_out_1x = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, strides = (1,1), padding = "SAME", 
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3), kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+        activation = tf.nn.relu, name = "DECON_vgg_layer7_out_1x")
 
-        vgg_layer7_out_2x = tf.layers.conv2d_transpose(vgg_layer7_out_1x, num_classes, 4, strides = (2,2), padding = "SAME",        kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3), kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),         activation = tf.nn.relu, name = "DECON_vgg_layer7_out_2x")
+        vgg_layer7_out_2x = tf.layers.conv2d_transpose(vgg_layer7_out_1x, num_classes, 4, strides = (2,2), padding = "SAME",
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3), kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+        activation = tf.nn.relu, name = "DECON_vgg_layer7_out_2x")
 
-        vgg_layer4_out_1x = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, strides = (1,1), padding = "SAME",        kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3), kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),         activation = tf.nn.relu, name = "DECON_vgg_layer4_out_1x")
+        vgg_layer4_out_1x = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, strides = (1,1), padding = "SAME", 
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3), kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+        activation = tf.nn.relu, name = "DECON_vgg_layer4_out_1x")
 
         vgg_layer4_7_combined = tf.add(vgg_layer7_out_2x, vgg_layer4_out_1x, name = "DECON_vgg_layer4_7_combined")
 
-        vgg_layer4_out_4x = tf.layers.conv2d_transpose(vgg_layer4_7_combined, num_classes, 4, strides = (2,2), padding = "SAME",        kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3), kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),         activation = tf.nn.relu, name = "DECON_vgg_layer7_out_4x")
+        vgg_layer4_out_4x = tf.layers.conv2d_transpose(vgg_layer4_7_combined, num_classes, 4, strides = (2,2), padding = "SAME",
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3), kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+        activation = tf.nn.relu, name = "DECON_vgg_layer7_out_4x")
 
-        vgg_layer3_out_1x = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, strides = (1,1), padding = "SAME",        kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3), kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),         activation = tf.nn.relu, name = "DECON_vgg_layer3_out_1x")
+        vgg_layer3_out_1x = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, strides = (1,1), padding = "SAME",
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3), kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+        activation = tf.nn.relu, name = "DECON_vgg_layer3_out_1x")
 
         vgg_layer3_7_combined = tf.add(vgg_layer4_out_4x, vgg_layer3_out_1x, name = "DECON_vgg_layer3_7_combined")
 
-        nn_last_layer = tf.layers.conv2d_transpose(vgg_layer3_7_combined, num_classes, 16, strides = (8,8), padding = "SAME",        kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3),kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),         activation = tf.nn.relu, name = "DECON_nn_last_layer")
+        nn_last_layer = tf.layers.conv2d_transpose(vgg_layer3_7_combined, num_classes, 16, strides = (8,8), padding = "SAME",
+        kernel_regularizer = tf.contrib.layers.l2_regularizer(1e-3),kernel_initializer=tf.truncated_normal_initializer(stddev=0.01),
+        name = "DECON_nn_last_layer")
     
 
     return nn_last_layer
 tests.test_layers(layers)
-
-
-# In[6]:
 
 
 def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
@@ -136,18 +131,20 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     
     loss_operation = tf.reduce_mean(cross_entropy)
     optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
-    update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
-    TRANSFER_LEARNING_MODE = False
+    #update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
+    #TRANSFER_LEARNING_MODE = False
+    print(len(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)), "ABCD")
+    print(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = "DECON"))
+    print(len(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope = "DECON")), "ABCD")
     if TRANSFER_LEARNING_MODE:
-        trainable_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "decoder")
+        trainable_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope =  "DECON")
         training_op = optimizer.minimize(loss_operation, var_list = trainable_variables, name = "training_op")
+        print ("Initialize only trainable variables")
     else:
         training_op = optimizer.minimize(loss_operation, name = "training_op")
+        print ("Initialize all variables")
     return logits, training_op, accuracy_op, loss_operation
-tests.test_optimize(optimize)
-
-
-# In[7]:
+#tests.test_optimize(optimize)
 
 
 def evaluate(image_shape, sess, input_image, correct_label,              keep_prob, loss_op, accuracy_op, is_training):
@@ -174,20 +171,56 @@ def evaluate(image_shape, sess, input_image, correct_label,              keep_pr
     return total_loss/num_examples, total_acc/num_examples
     
 
+def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
+             correct_label, keep_prob, learning_rate):
+    """
+    Train neural network and print out the loss during training.
+    :param sess: TF Session
+    :param epochs: Number of epochs
+    :param batch_size: Batch size
+    :param get_batches_fn: Function to get batches of training data.  Call using get_batches_fn(batch_size)
+    :param train_op: TF Operation to train the neural network
+    :param cross_entropy_loss: TF Tensor for the amount of loss
+    :param input_image: TF Placeholder for input images
+    :param correct_label: TF Placeholder for label images
+    :param keep_prob: TF Placeholder for dropout keep probability
+    :param learning_rate: TF Placeholder for learning rate
+    """
+    # TODO: Implement function
+    #batches_per_epoch = 10
+    if TRANSFER_LEARNING_MODE:
+        variable_initializers = [var.initializer for var in tf.global_variables() if 'DECON_' in var.name or  
+               'beta' in var.name] 
+        #[var.initializer for var in tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="DECON")]
+        sess.run(variable_initializers)
+    else:
+        sess.run(tf.global_variables_initializer())
+    for epoch in range(epochs):
+        print("Epoch: ", epoch)
+        i = 0
+        for X_batch, y_batch in get_batches_fn(batch_size):
+            i +=1 
+            #print("Batch ID: ", i)
+            
+            #for batch in tqdm(range(batches_per_epoch)):
+            #X_batch, y_batch = next(get_batches_fn)
+            
+            loss, _ = sess.run([cross_entropy_loss, train_op], feed_dict = { input_image: X_batch, \
+                                                                            correct_label: y_batch, \
+                                                                            keep_prob: KEEP_OPEN, \
+                                                                            learning_rate: LEARNING_RATE})
+        print("Epoch: Loss - ", loss)
+tests.test_train_nn(train_nn)
 
-# In[8]:
 
-
-def save_model(sess):
+def save_model(sess,  epochs, batch_size, learning_rate_scaled, keep_prob_scaled):
     if "saved_model" in os.listdir(os.getcwd()):
-        shutil.rmtree("./saved_model")
+        shutil.rmtree("./saved_model" )
     
-    builder = tf.saved_model.builder.SavedModelBuilder("./saved_model")
+    builder = tf.saved_model.builder.SavedModelBuilder("./saved_model" + str(epochs) + str(batch_size)+ str(learning_rate_scaled) + str(keep_prob_scaled))
     builder.add_meta_graph_and_variables(sess, ["vgg16"])
     builder.save()
 
-
-# In[9]:
 
 
 def run():
@@ -214,8 +247,8 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # TODO: Build NN using load_vgg, layers, and optimize function
-        epochs = 2
-        batch_size = 5
+        epochs = 20
+        batch_size = 1
         
         # TF placeholders
         
@@ -223,25 +256,28 @@ def run():
         learning_rate = tf.placeholder(tf.float32, name = 'learning_rate')
         
         input_image, keep_prob, vgg_layer3_out, vgg_layer4_out, vgg_layer7_out = load_vgg(sess, vgg_path)
-        
+        print("Loaded VGG")
         nn_last_layer = layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes)
-        
-        logits, train_op, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes)
+        print("Built layers")
+        logits, train_op, accuracy_op, cross_entropy_loss = optimize(nn_last_layer, correct_label, learning_rate, num_classes)
+        print("Defined optimization function")
         
         
         # TODO: Train NN using the train_nn function
 
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate)
-        
+        print("Training completed")
+        save_model(sess, epochs, batch_size, learning_rate * 10000, keep_prob * 10 )
         # TODO: Save inference data using helper.save_inference_samples
+        runs_dir = runs_dir + str(epochs) + str(batch_size)+ str(learning_rate_scaled) + str(keep_prob_scaled)
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
         # OPTIONAL: Apply the trained model to a video
 
 
-# In[ ]:
 
 
+        
 if __name__ == '__main__':
     run()
 
