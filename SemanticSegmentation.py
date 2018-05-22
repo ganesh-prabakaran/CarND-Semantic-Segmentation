@@ -9,9 +9,10 @@ import shutil
 #from tqdm import *
 
 
-TRANSFER_LEARNING_MODE = True
+TRANSFER_LEARNING_MODE = False
 LEARNING_RATE = 0.001
-KEEP_PROB = 0.4
+KEEP_PROB = 0.7
+BETA = 0.00001
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion('1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
@@ -129,8 +130,9 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     #Perform accuracy operation
     prediction_comp = tf.equal(tf.argmax(logits, 1), tf.argmax(labels, 1))
     accuracy_op = tf.reduce_mean(tf.cast(prediction_comp, tf.float32), name="accuracy_op")
-    
-    loss_operation = tf.reduce_mean(cross_entropy)
+    vars   = tf.trainable_variables()
+    lossL2 = tf.add_n([ tf.nn.l2_loss(v) for v in vars if 'bias' not in v.name ]) * 0.0001
+    loss_operation = tf.reduce_mean(cross_entropy + lossL2)
     optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
     #update_ops = tf.get_collection(tf.GraphKeys.UPDATE_OPS)
     #TRANSFER_LEARNING_MODE = False
@@ -249,7 +251,7 @@ def run():
 
         # TODO: Build NN using load_vgg, layers, and optimize function
         epochs = 30
-        batch_size = 5
+        batch_size = 3
         
         # TF placeholders
         
