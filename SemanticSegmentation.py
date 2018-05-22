@@ -5,12 +5,13 @@ import helper
 import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
+import shutil
 #from tqdm import *
 
 
 TRANSFER_LEARNING_MODE = True
-LEARNING_RATE = 0.0001
-KEEP_OPEN = 0.5
+LEARNING_RATE = 0.001
+KEEP_PROB = 0.4
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion('1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
@@ -207,15 +208,15 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
             
             loss, _ = sess.run([cross_entropy_loss, train_op], feed_dict = { input_image: X_batch, \
                                                                             correct_label: y_batch, \
-                                                                            keep_prob: KEEP_OPEN, \
+                                                                            keep_prob: KEEP_PROB, \
                                                                             learning_rate: LEARNING_RATE})
         print("Epoch: Loss - ", loss)
 tests.test_train_nn(train_nn)
 
 
 def save_model(sess,  epochs, batch_size, learning_rate_scaled, keep_prob_scaled):
-    if "saved_model" in os.listdir(os.getcwd()):
-        shutil.rmtree("./saved_model" )
+    if "saved_model"+ str(epochs) + str(batch_size)+ str(learning_rate_scaled) + str(keep_prob_scaled) in os.listdir(os.getcwd()):
+        shutil.rmtree("./saved_model"+ str(epochs) + str(batch_size)+ str(learning_rate_scaled) + str(keep_prob_scaled) )
     
     builder = tf.saved_model.builder.SavedModelBuilder("./saved_model" + str(epochs) + str(batch_size)+ str(learning_rate_scaled) + str(keep_prob_scaled))
     builder.add_meta_graph_and_variables(sess, ["vgg16"])
@@ -247,8 +248,8 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # TODO: Build NN using load_vgg, layers, and optimize function
-        epochs = 20
-        batch_size = 1
+        epochs = 30
+        batch_size = 5
         
         # TF placeholders
         
@@ -267,9 +268,9 @@ def run():
 
         train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image, correct_label, keep_prob, learning_rate)
         print("Training completed")
-        save_model(sess, epochs, batch_size, learning_rate * 10000, keep_prob * 10 )
+        save_model(sess, epochs, batch_size, LEARNING_RATE * 10000, KEEP_PROB * 10 )
         # TODO: Save inference data using helper.save_inference_samples
-        runs_dir = runs_dir + str(epochs) + str(batch_size)+ str(learning_rate_scaled) + str(keep_prob_scaled)
+        runs_dir = runs_dir + str(epochs) + str(batch_size)+ str(LEARNING_RATE * 10000) + str(KEEP_PROB *10)
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
         # OPTIONAL: Apply the trained model to a video
